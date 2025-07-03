@@ -46,14 +46,26 @@ export default function AdminPanel({
       const data: GitHubAnalysisResponse = await response.json();
 
       if (data.success && data.analysis) {
-        setAnalysis(data.analysis);
+        // BUG FIX: Ensure analysis is always a string
+        setAnalysis(
+          typeof data.analysis === "string"
+            ? data.analysis
+            : JSON.stringify(data.analysis)
+        );
         if (data.metadata) {
           setMetadata(data.metadata);
         }
       } else {
-        setError(data.error || "Failed to analyze repository");
+        // BUG FIX: Ensure error is always a string
+        const errorMessage = data.error || "Failed to analyze repository";
+        setError(
+          typeof errorMessage === "string"
+            ? errorMessage
+            : JSON.stringify(errorMessage)
+        );
       }
     } catch (err) {
+      // BUG FIX: Ensure error is always a string
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Network error during GitHub analysis: ${errorMessage}`);
@@ -67,6 +79,8 @@ export default function AdminPanel({
   const handleDescriptiveAnalysis = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     setError(null);
+    setAnalysis(null);
+    setMetadata(null);
 
     const critiquePrompts: Record<string, string> = {
       usability: `Analyze the usability of this Interview Practice App: [detailed usability analysis prompt]`,
@@ -91,11 +105,23 @@ export default function AdminPanel({
       const data = await response.json();
 
       if (data.success) {
-        setAnalysis(data.question);
+        // BUG FIX: Ensure analysis is always a string
+        setAnalysis(
+          typeof data.question === "string"
+            ? data.question
+            : JSON.stringify(data.question)
+        );
       } else {
-        setError(data.error || "Failed to get critique");
+        // BUG FIX: Ensure error is always a string
+        const errorMessage = data.error || "Failed to get critique";
+        setError(
+          typeof errorMessage === "string"
+            ? errorMessage
+            : JSON.stringify(errorMessage)
+        );
       }
     } catch (err) {
+      // BUG FIX: Ensure error is always a string
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Network error during analysis: ${errorMessage}`);
@@ -109,6 +135,10 @@ export default function AdminPanel({
   const handleAnalysisTypeChange = useCallback(
     (event: React.ChangeEvent<HTMLSelectElement>) => {
       setAnalysisType(event.target.value as AnalysisType);
+      // Clear results when changing analysis type
+      setAnalysis(null);
+      setMetadata(null);
+      setError(null);
     },
     []
   );
@@ -199,6 +229,15 @@ export default function AdminPanel({
                   <option value="github-performance">
                     ⚡ Performance Analysis
                   </option>
+                  <option value="github-critical">
+                    🚨 Critical Issues ONLY
+                  </option>
+                  <option value="github-production">
+                    🚀 Production Readiness
+                  </option>
+                  <option value="github-final">
+                    ✅ Final Validation Review
+                  </option>
                 </optgroup>
                 <optgroup label="📝 Conceptual Analysis">
                   <option value="usability">🎨 Usability & UX Design</option>
@@ -209,6 +248,45 @@ export default function AdminPanel({
                 </optgroup>
               </select>
             </div>
+
+            {/* Analysis Scope Indicator */}
+            {isGitHubAnalysis && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="font-medium text-yellow-800 mb-2">
+                  📊 Analysis Scope:
+                </h4>
+                <div className="text-sm text-yellow-700">
+                  {analysisType === "github-critical" && (
+                    <p>
+                      🚨 <strong>Critical Issues Only:</strong> Security
+                      vulnerabilities, breaking bugs, production blockers
+                    </p>
+                  )}
+                  {analysisType === "github-production" && (
+                    <p>
+                      🚀 <strong>Production Readiness:</strong> Deployment
+                      readiness, scalability, monitoring needs
+                    </p>
+                  )}
+                  {analysisType === "github-final" && (
+                    <p>
+                      ✅ <strong>Final Validation:</strong> Verify previous
+                      fixes were implemented correctly
+                    </p>
+                  )}
+                  {![
+                    "github-critical",
+                    "github-production",
+                    "github-final",
+                  ].includes(analysisType) && (
+                    <p>
+                      🔍 <strong>Comprehensive Review:</strong> All issues
+                      including minor optimizations
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* GitHub URL Input */}
             {isGitHubAnalysis && (
@@ -280,7 +358,7 @@ export default function AdminPanel({
               )}
             </button>
 
-            {/* Error Display */}
+            {/* BUG FIXED: Error Display */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex items-center">
@@ -289,7 +367,12 @@ export default function AdminPanel({
                     <h3 className="text-sm font-medium text-red-800">
                       Analysis Error
                     </h3>
-                    <p className="text-sm text-red-700">{error}</p>
+                    <p className="text-sm text-red-700">
+                      {/* BUG FIX: Ensure we only render strings */}
+                      {typeof error === "string"
+                        ? error
+                        : "An error occurred but could not be displayed"}
+                    </p>
                     {isGitHubAnalysis && (
                       <p className="text-xs text-red-600 mt-1">
                         💡 Tip: Make sure the repository is public and the URL
@@ -301,7 +384,7 @@ export default function AdminPanel({
               </div>
             )}
 
-            {/* Analysis Results */}
+            {/* BUG FIXED: Analysis Results */}
             {analysis && (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -312,14 +395,18 @@ export default function AdminPanel({
                   </h3>
                   {metadata && (
                     <div className="text-sm text-purple-600">
-                      📊 {metadata.filesAnalyzed} files analyzed
+                      {/* BUG FIX: Safe property access */}
+                      📊 {metadata.filesAnalyzed || 0} files analyzed
                     </div>
                   )}
                 </div>
 
                 <div className="bg-white border border-purple-200 rounded p-4 max-h-[500px] overflow-y-auto">
                   <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">
-                    {analysis}
+                    {/* BUG FIX: Ensure we only render strings */}
+                    {typeof analysis === "string"
+                      ? analysis
+                      : "Analysis completed but content cannot be displayed"}
                   </pre>
                 </div>
 
