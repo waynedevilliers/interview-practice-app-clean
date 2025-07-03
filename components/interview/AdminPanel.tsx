@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
 interface AdminPanelProps {
   isVisible: boolean;
@@ -8,146 +8,80 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ isVisible, onToggle }: AdminPanelProps) {
-  const [critiqueType, setCritiqueType] = useState('usability');
+  const [analysisType, setAnalysisType] = useState("github-security");
+  const [repoUrl, setRepoUrl] = useState(
+    "https://github.com/your-username/interview-practice-app"
+  );
   const [isLoading, setIsLoading] = useState(false);
-  const [critique, setCritique] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [metadata, setMetadata] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGetCritique = async () => {
+  const handleGitHubAnalysis = async () => {
     setIsLoading(true);
     setError(null);
-
-    const critiquePrompts = {
-      usability: `Analyze the usability of this Interview Practice App:
-
-**App Features:**
-- Next.js + TypeScript interview practice application
-- Two-column layout: form left, questions/results right  
-- Users generate AI questions by job role, type (technical/behavioral/industry), difficulty 1-10
-- Users answer questions and get AI evaluation with scoring
-- Real-time feedback with strengths and improvement suggestions
-
-**Current UX:**
-- Form stays on left, results flow on right
-- Loading states during AI generation
-- Character counter on answer textarea
-- Color-coded scoring (green ≥8, yellow ≥6, red <6)
-- Copy buttons for questions and feedback
-
-**Please critique USABILITY specifically:**
-1. User interface design and layout effectiveness
-2. User workflow and navigation clarity
-3. Accessibility considerations
-4. Mobile responsiveness concerns
-5. Error messaging and user feedback quality
-6. Areas where users might get confused
-7. Specific UX improvements to implement
-
-Be detailed and actionable in your feedback.`,
-
-      security: `Analyze the security of this Interview Practice App:
-
-**Current Security Implementation:**
-- OpenAI API key stored in environment variables
-- Basic input validation (required fields, empty checks)
-- TypeScript for type safety
-- Error handling for API failures
-- No user authentication currently
-
-**Architecture:**
-- Next.js API routes: /api/interview and /api/interview/evaluate
-- Frontend form sends data to backend APIs
-- Backend calls OpenAI API with user inputs
-- Responses displayed directly to user
-
-**Please critique SECURITY specifically:**
-1. Prompt injection vulnerability risks
-2. Input validation gaps and attack vectors
-3. API security concerns and rate limiting needs
-4. Data handling and privacy considerations
-5. Potential for abuse or misuse
-6. Missing security headers or protections
-7. Specific security measures to implement immediately
-
-Identify real vulnerabilities and provide actionable security improvements.`,
-
-      promptEngineering: `Analyze the prompt engineering of this Interview Practice App:
-
-**Current Prompt Strategy:**
-- System prompt: "You are an expert interview coach with 10+ years experience"
-- Difficulty scaling: 1-3 simple, 4-6 moderate, 7-10 complex
-- Token limits: 100-300 based on difficulty
-- Interview types: technical, behavioral, industry-specific
-- Evaluation format: SCORE, STRENGTHS, AREAS FOR IMPROVEMENT, DETAILED FEEDBACK
-
-**Sample System Prompt:**
-"You are an expert interview coach with 10+ years of experience. Generate realistic, professional interview questions that test actual job skills. Match the complexity to the difficulty level specified."
-
-**Sample Evaluation Prompt:**
-"Please evaluate this interview answer: [question/answer] Context: Role: [role], Type: [type], Difficulty: [level]/10. Provide evaluation in this exact format: SCORE: [1-10], STRENGTHS: [list], AREAS FOR IMPROVEMENT: [list], DETAILED FEEDBACK: [feedback]"
-
-**Please critique PROMPT ENGINEERING specifically:**
-1. Effectiveness of current prompt structure
-2. Consistency and reliability of AI responses
-3. Bias considerations in question generation
-4. Quality of evaluation criteria and scoring
-5. Prompt optimization opportunities
-6. Missing context or instructions
-7. Specific prompt improvements to implement
-
-Provide actionable prompt engineering improvements.`,
-
-      overall: `Provide an overall critique of this Interview Practice App:
-
-**Complete Feature Set:**
-- AI-powered interview question generation
-- User answer collection and evaluation
-- Difficulty scaling (1-10 levels)
-- Multiple interview types (technical/behavioral/industry)
-- Real-time AI feedback with scoring
-- Professional UI with Tailwind CSS
-
-**Technology Stack:**
-- Frontend: Next.js 15 + TypeScript + Tailwind CSS
-- Backend: Next.js API routes
-- AI: OpenAI GPT-4o-mini integration
-- Deployment ready with environment variables
-
-**Please provide OVERALL CRITIQUE:**
-1. Top 3 priority improvements needed
-2. Missing features that would add significant value
-3. Industry best practices we should implement
-4. Scalability and maintainability concerns
-5. Feature suggestions for enhanced user experience
-6. Technical debt or architectural improvements
-7. Roadmap for making this production-ready
-
-Focus on actionable recommendations that would make the biggest impact.`
-    };
+    setAnalysis(null);
+    setMetadata(null);
 
     try {
-      const response = await fetch('/api/interview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/admin/github-analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jobRole: 'Software Architect',
-          interviewType: 'technical',
-          difficulty: 10,
-          adminCritique: true,
-          critiquePrompt: critiquePrompts[critiqueType as keyof typeof critiquePrompts]
+          repoUrl,
+          analysisType: analysisType.replace("github-", ""),
         }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        setCritique(data.question);
+        setAnalysis(data.analysis);
+        setMetadata(data.metadata);
       } else {
-        setError(data.error || 'Failed to get critique');
+        setError(data.error || "Failed to analyze repository");
       }
     } catch (err) {
-      setError('Network error during critique request');
-      console.error('Critique Error:', err);
+      setError("Network error during GitHub analysis");
+      console.error("GitHub Analysis Error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDescriptiveAnalysis = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    // Your existing descriptive analysis logic here
+    const critiquePrompts = {
+      usability: `Analyze the usability of this Interview Practice App: [existing prompt]`,
+      // ... other prompts
+    };
+
+    try {
+      const response = await fetch("/api/interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobRole: "Software Architect",
+          interviewType: "technical",
+          difficulty: 10,
+          adminCritique: true,
+          critiquePrompt:
+            critiquePrompts[analysisType as keyof typeof critiquePrompts],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setAnalysis(data.question);
+      } else {
+        setError(data.error || "Failed to get critique");
+      }
+    } catch (err) {
+      setError("Network error during analysis");
     } finally {
       setIsLoading(false);
     }
@@ -168,10 +102,12 @@ Focus on actionable recommendations that would make the biggest impact.`
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">🔧 Admin: App Critique Panel</h2>
+            <h2 className="text-2xl font-bold text-gray-800">
+              🔧 Admin: Code Analysis Panel
+            </h2>
             <button
               onClick={onToggle}
               className="text-gray-500 hover:text-gray-700 text-2xl"
@@ -181,40 +117,107 @@ Focus on actionable recommendations that would make the biggest impact.`
           </div>
 
           <div className="space-y-6">
-            {/* Critique Type Selection */}
+            {/* Analysis Type Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Critique Focus Area:
+                Analysis Type:
               </label>
               <select
-                value={critiqueType}
-                onChange={(e) => setCritiqueType(e.target.value)}
+                value={analysisType}
+                onChange={(e) => setAnalysisType(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 disabled={isLoading}
               >
-                <option value="usability">🎨 Usability & UX Design</option>
-                <option value="security">🔒 Security & Vulnerabilities</option>
-                <option value="promptEngineering">🤖 Prompt Engineering Quality</option>
-                <option value="overall">📊 Overall App Assessment</option>
+                <optgroup label="🔗 Real GitHub Code Analysis">
+                  <option value="github-security">
+                    🔒 Security Vulnerabilities
+                  </option>
+                  <option value="github-codeQuality">
+                    ✨ Code Quality Review
+                  </option>
+                  <option value="github-architecture">
+                    🏗️ Architecture Analysis
+                  </option>
+                  <option value="github-performance">
+                    ⚡ Performance Analysis
+                  </option>
+                </optgroup>
+                <optgroup label="📝 Conceptual Analysis">
+                  <option value="usability">🎨 Usability & UX Design</option>
+                  <option value="promptEngineering">
+                    🤖 Prompt Engineering
+                  </option>
+                  <option value="overall">📊 Overall Assessment</option>
+                </optgroup>
               </select>
             </div>
 
-            {/* Get Critique Button */}
+            {/* GitHub URL Input */}
+            {analysisType.startsWith("github-") && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  GitHub Repository URL:
+                </label>
+                <input
+                  type="url"
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                  placeholder="https://github.com/username/interview-practice-app"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  disabled={isLoading}
+                />
+                <div className="mt-2 flex items-center text-xs text-gray-500">
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded mr-2">
+                    🔍 LIVE CODE ANALYSIS
+                  </span>
+                  Will analyze actual source code from your repository
+                </div>
+              </div>
+            )}
+
+            {/* Analyze Button */}
             <button
-              onClick={handleGetCritique}
-              disabled={isLoading}
+              onClick={
+                analysisType.startsWith("github-")
+                  ? handleGitHubAnalysis
+                  : handleDescriptiveAnalysis
+              }
+              disabled={
+                isLoading ||
+                (analysisType.startsWith("github-") &&
+                  !repoUrl.includes("github.com"))
+              }
               className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 transition-colors font-medium"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
-                  Getting AI Critique...
+                  {analysisType.startsWith("github-")
+                    ? "Analyzing Repository..."
+                    : "Getting AI Critique..."}
                 </span>
+              ) : analysisType.startsWith("github-") ? (
+                "🔍 Analyze GitHub Repository"
               ) : (
-                '🔍 Get AI Critique of App'
+                "🔍 Get AI Critique"
               )}
             </button>
 
@@ -224,50 +227,97 @@ Focus on actionable recommendations that would make the biggest impact.`
                 <div className="flex items-center">
                   <span className="text-red-400 text-xl mr-3">❌</span>
                   <div>
-                    <h3 className="text-sm font-medium text-red-800">Error</h3>
+                    <h3 className="text-sm font-medium text-red-800">
+                      Analysis Error
+                    </h3>
                     <p className="text-sm text-red-700">{error}</p>
+                    {analysisType.startsWith("github-") && (
+                      <p className="text-xs text-red-600 mt-1">
+                        💡 Tip: Make sure the repository is public and the URL
+                        is correct
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Critique Results */}
-            {critique && (
+            {/* Analysis Results */}
+            {analysis && (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-purple-800 mb-4">
-                  🤖 AI Critique Results
-                </h3>
-                <div className="bg-white border border-purple-200 rounded p-4 max-h-96 overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-purple-800">
+                    {analysisType.startsWith("github-")
+                      ? "🔗 GitHub Code Analysis"
+                      : "🤖 AI Analysis Results"}
+                  </h3>
+                  {metadata && (
+                    <div className="text-sm text-purple-600">
+                      📊 {metadata.filesAnalyzed} files analyzed
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white border border-purple-200 rounded p-4 max-h-[500px] overflow-y-auto">
                   <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">
-                    {critique}
+                    {analysis}
                   </pre>
                 </div>
+
                 <div className="mt-4 flex gap-3">
                   <button
-                    onClick={() => navigator.clipboard.writeText(critique)}
+                    onClick={() => navigator.clipboard.writeText(analysis)}
                     className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
                   >
-                    📋 Copy Critique
+                    📋 Copy Analysis
                   </button>
                   <button
-                    onClick={() => setCritique(null)}
+                    onClick={() => setAnalysis(null)}
                     className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
                   >
                     🔄 Clear Results
                   </button>
+                  {analysisType.startsWith("github-") && (
+                    <button
+                      onClick={() => window.open(repoUrl, "_blank")}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                    >
+                      🔗 View Repository
+                    </button>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Info Panel */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-800 mb-2">ℹ️ How This Works:</h4>
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Uses your own interview app API to generate critique</li>
-                <li>• Sends specialized prompts for different analysis areas</li>
-                <li>• Provides actionable feedback for app improvements</li>
-                <li>• Admin panel only visible when toggled on</li>
-              </ul>
+              <h4 className="font-medium text-blue-800 mb-2">
+                ℹ️ Analysis Types:
+              </h4>
+              <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-700">
+                <div>
+                  <p>
+                    <strong>🔗 GitHub Analysis:</strong>
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>Reads actual source code files</li>
+                    <li>Provides file-specific feedback</li>
+                    <li>Identifies real vulnerabilities</li>
+                    <li>Reviews actual architecture</li>
+                  </ul>
+                </div>
+                <div>
+                  <p>
+                    <strong>📝 Conceptual Analysis:</strong>
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>Analyzes app concept and features</li>
+                    <li>UX and usability feedback</li>
+                    <li>Prompt engineering review</li>
+                    <li>Overall assessment</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import QuestionGenerator from '@/components/interview/QuestionGenerator';
-import AdminPanel from '@/components/interview/AdminPanel';
+import { useState } from "react";
+import QuestionGenerator from "@/components/interview/QuestionGenerator";
+import AdminPanel from "@/components/interview/AdminPanel";
 
-export default function Home() {
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
+export default function Home(): JSX.Element {
+  const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
@@ -18,12 +18,11 @@ export default function Home() {
             AI-powered interview questions tailored to your role and experience
           </p>
         </div>
-        
+
         <QuestionGenerator />
       </div>
 
-      {/* Admin Panel */}
-      <AdminPanel 
+      <AdminPanel
         isVisible={showAdminPanel}
         onToggle={() => setShowAdminPanel(!showAdminPanel)}
       />
