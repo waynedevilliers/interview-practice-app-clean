@@ -23,3 +23,18 @@ export interface PromptSettings {
   frequencyPenalty: number;
   presencePenalty: number;
 }
+
+export interface AnswerEvaluation {
+  score: number; // 1-10
+  feedback: string;
+  strengths: string[];
+  improvements: string[];
+  overallComment: string;
+}
+
+export interface InterviewSession {
+  question: InterviewQuestion;
+  userAnswer?: string;
+  evaluation?: AnswerEvaluation;
+  status: 'question-generated' | 'answer-submitted' | 'evaluated';
+}
