@@ -1,6 +1,6 @@
 export interface InterviewQuestion {
   id: string;
-  type: 'technical' | 'behavioral' | 'industry';
+  type: "technical" | "behavioral" | "industry";
   difficulty: number;
   question: string;
   followUp?: string;
@@ -24,17 +24,53 @@ export interface PromptSettings {
   presencePenalty: number;
 }
 
-export interface AnswerEvaluation {
-  score: number; // 1-10
-  feedback: string;
-  strengths: string[];
-  improvements: string[];
-  overallComment: string;
+// Form data interface
+export interface InterviewFormData {
+  jobRole: string;
+  interviewType: "technical" | "behavioral" | "industry";
+  difficulty: number;
 }
 
-export interface InterviewSession {
-  question: InterviewQuestion;
-  userAnswer?: string;
+// API response interfaces
+export interface InterviewQuestionResponse {
+  success: boolean;
+  question?: string;
+  metadata?: {
+    jobRole: string;
+    interviewType: string;
+    difficulty: number;
+    timestamp: string;
+    rateLimitRemaining?: number;
+    type?: "admin_critique";
+  };
+  error?: string;
+}
+
+export interface AnswerEvaluation {
+  rawFeedback: string;
+  score: number;
+  timestamp: string;
+}
+
+export interface EvaluationResponse {
+  success: boolean;
   evaluation?: AnswerEvaluation;
-  status: 'question-generated' | 'answer-submitted' | 'evaluated';
+  metadata?: {
+    question: string;
+    answerLength: number;
+    jobRole: string;
+    interviewType: string;
+    difficulty: number;
+  };
+  error?: string;
+}
+
+// Hook return types
+export interface UseInterviewState {
+  currentQuestion: InterviewQuestionResponse | null;
+  userAnswer: string;
+  evaluation: AnswerEvaluation | null;
+  isLoading: boolean;
+  isEvaluating: boolean;
+  error: string | null;
 }
