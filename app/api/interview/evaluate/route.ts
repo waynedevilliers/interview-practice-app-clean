@@ -1,14 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { openai } from '@/lib/openai';
+import { NextRequest, NextResponse } from "next/server";
+import { openai } from "@/lib/openai";
 
 export async function POST(request: NextRequest) {
   try {
-    const { question, answer, jobRole, interviewType, difficulty } = await request.json();
-    
+    const { question, answer, jobRole, interviewType, difficulty } =
+      await request.json();
+
     // Input validation
     if (!question || !answer || !jobRole) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { success: false, error: "Missing required fields" },
         { status: 400 }
       );
     }
@@ -51,15 +52,23 @@ AREAS FOR IMPROVEMENT:
 DETAILED FEEDBACK:
 [Provide 2-3 sentences of constructive feedback with specific suggestions]
 
-${interviewType === 'behavioral' ? 'STAR METHOD ASSESSMENT: [Evaluate if they used Situation, Task, Action, Result structure]' : ''}
-${interviewType === 'technical' ? 'TECHNICAL ACCURACY: [Assess technical correctness and depth]' : ''}`;
+${
+  interviewType === "behavioral"
+    ? "STAR METHOD ASSESSMENT: [Evaluate if they used Situation, Task, Action, Result structure]"
+    : ""
+}
+${
+  interviewType === "technical"
+    ? "TECHNICAL ACCURACY: [Assess technical correctness and depth]"
+    : ""
+}`;
 
     // Call OpenAI for evaluation
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: "gpt-4o-mini",
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: evaluationPrompt }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: evaluationPrompt },
       ],
       temperature: 0.3, // Lower temperature for more consistent evaluation
       max_tokens: 500,
@@ -76,21 +85,20 @@ ${interviewType === 'technical' ? 'TECHNICAL ACCURACY: [Assess technical correct
       evaluation: {
         rawFeedback: evaluation,
         score: score,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
       metadata: {
-        question: question.substring(0, 100) + '...', // First 100 chars for logging
+        question: question.substring(0, 100) + "...", // First 100 chars for logging
         answerLength: answer.length,
         jobRole,
         interviewType,
-        difficulty
-      }
+        difficulty,
+      },
     });
-
   } catch (error) {
-    console.error('Answer Evaluation Error:', error);
+    console.error("Answer Evaluation Error:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to evaluate answer. Please try again.' },
+      { success: false, error: "Failed to evaluate answer. Please try again." },
       { status: 500 }
     );
   }
@@ -98,8 +106,8 @@ ${interviewType === 'technical' ? 'TECHNICAL ACCURACY: [Assess technical correct
 
 // Health check for evaluate endpoint
 export async function GET() {
-  return NextResponse.json({ 
-    status: 'Evaluation API is running!',
-    timestamp: new Date().toISOString()
+  return NextResponse.json({
+    status: "Evaluation API is running!",
+    timestamp: new Date().toISOString(),
   });
 }
