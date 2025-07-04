@@ -1,6 +1,15 @@
+// @/types/interview.ts
+
 export interface InterviewQuestion {
   id: string;
-  type: "technical" | "behavioral" | "industry";
+  type:
+    | "technical"
+    | "behavioral"
+    | "industry"
+    | "system-design"
+    | "coding"
+    | "leadership"
+    | "cultural-fit";
   difficulty: number;
   question: string;
   followUp?: string;
@@ -22,19 +31,36 @@ export interface PromptSettings {
   topP: number;
   frequencyPenalty: number;
   presencePenalty: number;
+  model: string; // Added model selection
 }
 
-// Form data interface
+// Enhanced form data interface to support new features
 export interface InterviewFormData {
   jobRole: string;
-  interviewType: "technical" | "behavioral" | "industry";
+  interviewType:
+    | "technical"
+    | "behavioral"
+    | "industry"
+    | "system-design"
+    | "coding"
+    | "leadership"
+    | "cultural-fit";
   difficulty: number;
+  jobDescription?: string; // New optional field
+  openAISettings?: PromptSettings; // New optional settings
 }
 
 // API response interfaces
 export interface InterviewQuestionResponse {
   success: boolean;
   question?: string;
+  usage?: {
+    // New usage tracking for cost calculation
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  settings?: PromptSettings; // Echo back settings used
   metadata?: {
     jobRole: string;
     interviewType: string;
@@ -42,6 +68,7 @@ export interface InterviewQuestionResponse {
     timestamp: string;
     rateLimitRemaining?: number;
     type?: "admin_critique";
+    hasJobDescription?: boolean; // New field
   };
   error?: string;
 }
@@ -73,4 +100,20 @@ export interface UseInterviewState {
   isLoading: boolean;
   isEvaluating: boolean;
   error: string | null;
+}
+
+// New interface for cost calculation
+export interface CostInfo {
+  estimatedTokens: number;
+  estimatedCost: number;
+  actualTokens?: number;
+  actualCost?: number;
+}
+
+// Model pricing information
+export interface ModelCosts {
+  [key: string]: {
+    input: number; // cost per 1K tokens
+    output: number; // cost per 1K tokens
+  };
 }

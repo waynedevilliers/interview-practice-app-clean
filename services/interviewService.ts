@@ -1,9 +1,23 @@
+// services/interviewService.ts
 import { openai } from "@/lib/openai";
 import { validateInput, sanitizeForAI } from "@/lib/utils";
 import type {
   InterviewFormData,
   InterviewQuestionResponse,
 } from "@/types/interview";
+
+// Extended interface to support new features
+interface ExtendedInterviewFormData extends InterviewFormData {
+  jobDescription?: string;
+  openAISettings?: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    frequencyPenalty: number;
+    presencePenalty: number;
+    model: string;
+  };
+}
 
 export class InterviewService {
   private static getDifficultyGuidelines(level: number): string {
@@ -29,16 +43,26 @@ export class InterviewService {
     Always keep questions focused and avoid excessive detail unless it's level 8+.`;
   }
 
-  private static createUserPrompt(formData: InterviewFormData): string {
-    const { jobRole, interviewType, difficulty } = formData;
+  private static createUserPrompt(formData: ExtendedInterviewFormData): string {
+    const { jobRole, interviewType, difficulty, jobDescription } = formData;
     const difficultyGuideline = this.getDifficultyGuidelines(difficulty);
+
+    let jobDescriptionContext = "";
+    if (jobDescription && jobDescription.trim()) {
+      jobDescriptionContext = `
+    
+    **Job Description Context:**
+    ${sanitizeForAI(jobDescription)}
+    
+    Please tailor the question to be relevant to the specific requirements and technologies mentioned above.`;
+    }
 
     return `Generate a ${interviewType} interview question for a ${sanitizeForAI(
       jobRole
     )} position.
     
     **Difficulty Level: ${difficulty}/10**
-    ${difficultyGuideline}
+    ${difficultyGuideline}${jobDescriptionContext}
     
     Requirements:
     - Make it realistic and specific to the role
@@ -62,13 +86,34 @@ export class InterviewService {
         ? "Focus on industry-specific knowledge and trends."
         : ""
     }
+    ${
+      interviewType === "system-design"
+        ? "Focus on scalability, architecture decisions, and trade-offs."
+        : ""
+    }
+    ${
+      interviewType === "coding"
+        ? "Present a coding challenge with clear constraints and expectations."
+        : ""
+    }
+    ${
+      interviewType === "leadership"
+        ? "Focus on team management, decision-making, and strategic thinking."
+        : ""
+    }
+    ${
+      interviewType === "cultural-fit"
+        ? "Focus on values alignment, work style, and team collaboration."
+        : ""
+    }
     
     Generate ONLY the question. No additional context or explanations unless difficulty is 7+.`;
   }
 
-  static async generateQuestion(formData: InterviewFormData): Promise<{
+  static async generateQuestion(formData: ExtendedInterviewFormData): Promise<{
     success: boolean;
     question?: string;
+    usage?: any; // OpenAI usage for cost tracking
     error?: string;
   }> {
     try {
@@ -81,20 +126,46 @@ export class InterviewService {
         };
       }
 
-      const response = await openai.chat.completions.create({
+      // Validate job description if provided
+      if (formData.jobDescription) {
+        const jobDescValidation = validateInput(formData.jobDescription);
+        if (!jobDescValidation.isValid) {
+          return {
+            success: false,
+            error: `Invalid job description: ${jobDescValidation.message}`,
+          };
+        }
+      }
+
+      // Use user settings or defaults
+      const settings = {
+        temperature: 0.7,
+        maxTokens:
+          formData.difficulty <= 3 ? 100 : formData.difficulty <= 6 ? 200 : 300,
+        topP: 0.9,
+        frequencyPenalty: 0.3,
+        presencePenalty: 0.0,
         model: "gpt-4o-mini",
+        ...formData.openAISettings, // Override with user settings if provided
+      };
+
+      const response = await openai.chat.completions.create({
+        model: settings.model,
         messages: [
           { role: "system", content: this.createSystemPrompt() },
           { role: "user", content: this.createUserPrompt(formData) },
         ],
-        temperature: 0.7,
-        max_tokens:
-          formData.difficulty <= 3 ? 100 : formData.difficulty <= 6 ? 200 : 300,
+        temperature: settings.temperature,
+        max_tokens: settings.maxTokens,
+        top_p: settings.topP,
+        frequency_penalty: settings.frequencyPenalty,
+        presence_penalty: settings.presencePenalty,
       });
 
       return {
         success: true,
         question: response.choices[0].message.content || undefined,
+        usage: response.usage, // Include usage for cost calculation
       };
     } catch (error) {
       console.error(
@@ -108,6 +179,7 @@ export class InterviewService {
     }
   }
 
+  // Keep your existing evaluateAnswer method exactly as is
   static async evaluateAnswer(data: {
     question: string;
     answer: string;

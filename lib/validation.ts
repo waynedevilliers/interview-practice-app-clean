@@ -1,3 +1,4 @@
+// lib/validation.ts
 import Joi from "joi";
 
 // Interview request validation schema
@@ -15,17 +16,50 @@ export const interviewRequestSchema = Joi.object({
     }),
 
   interviewType: Joi.string()
-    .valid("technical", "behavioral", "industry")
+    .valid(
+      "technical",
+      "behavioral",
+      "industry",
+      "system-design",
+      "coding",
+      "leadership",
+      "cultural-fit"
+    )
     .required(),
 
   difficulty: Joi.number().integer().min(1).max(10).required(),
 
-  // Admin critique fields (optional)
+  // New optional fields
+  jobDescription: Joi.string()
+    .trim()
+    .max(2000)
+    .pattern(
+      /^[a-zA-Z0-9\s\-\/\.\,\:\;\(\)\[\]\{\}\@\#\$\%\^\&\*\+\=\?\!\~\`\"\']*$/
+    ) // Allow common job description characters
+    .optional()
+    .allow("")
+    .messages({
+      "string.max": "Job description must be less than 2000 characters",
+      "string.pattern.base": "Job description contains invalid characters",
+    }),
+
+  openAISettings: Joi.object({
+    temperature: Joi.number().min(0).max(2).optional(),
+    maxTokens: Joi.number().integer().min(50).max(4000).optional(),
+    topP: Joi.number().min(0.1).max(1).optional(),
+    frequencyPenalty: Joi.number().min(-2).max(2).optional(),
+    presencePenalty: Joi.number().min(-2).max(2).optional(),
+    model: Joi.string()
+      .valid("gpt-4", "gpt-4-turbo", "gpt-4o-mini", "gpt-3.5-turbo")
+      .optional(),
+  }).optional(),
+
+  // Admin critique fields (optional) - keeping your existing implementation
   adminCritique: Joi.boolean().optional(),
   critiquePrompt: Joi.string().max(2000).optional(),
 });
 
-// Answer evaluation validation schema
+// Answer evaluation validation schema - keeping your existing implementation
 export const evaluationRequestSchema = Joi.object({
   question: Joi.string().trim().min(10).max(2000).required(),
 
@@ -43,7 +77,7 @@ export const evaluationRequestSchema = Joi.object({
   difficulty: Joi.number().integer().min(1).max(10).required(),
 });
 
-// GitHub analysis validation schema
+// GitHub analysis validation schema - keeping your existing implementation
 export const githubAnalysisSchema = Joi.object({
   repoUrl: Joi.string()
     .uri()
