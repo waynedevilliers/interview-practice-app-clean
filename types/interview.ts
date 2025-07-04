@@ -25,16 +25,17 @@ export interface InterviewSession {
   createdAt: Date;
 }
 
-export interface PromptSettings {
+export interface LLMSettings {
+  provider: "openai" | "claude";
   temperature: number;
   maxTokens: number;
   topP: number;
-  frequencyPenalty: number;
-  presencePenalty: number;
-  model: string; // Added model selection
+  frequencyPenalty: number; // OpenAI only
+  presencePenalty: number; // OpenAI only
+  model: string;
 }
 
-// Enhanced form data interface to support new features
+// Enhanced form data interface to support multiple LLMs
 export interface InterviewFormData {
   jobRole: string;
   interviewType:
@@ -46,8 +47,8 @@ export interface InterviewFormData {
     | "leadership"
     | "cultural-fit";
   difficulty: number;
-  jobDescription?: string; // New optional field
-  openAISettings?: PromptSettings; // New optional settings
+  jobDescription?: string;
+  llmSettings?: LLMSettings; // Changed from openAISettings to llmSettings
 }
 
 // API response interfaces
@@ -55,12 +56,13 @@ export interface InterviewQuestionResponse {
   success: boolean;
   question?: string;
   usage?: {
-    // New usage tracking for cost calculation
-    prompt_tokens: number;
-    completion_tokens: number;
+    prompt_tokens?: number; // OpenAI format
+    completion_tokens?: number; // OpenAI format
     total_tokens: number;
+    input_tokens?: number; // Claude format
+    output_tokens?: number; // Claude format
   };
-  settings?: PromptSettings; // Echo back settings used
+  settings?: LLMSettings;
   metadata?: {
     jobRole: string;
     interviewType: string;
@@ -68,7 +70,8 @@ export interface InterviewQuestionResponse {
     timestamp: string;
     rateLimitRemaining?: number;
     type?: "admin_critique";
-    hasJobDescription?: boolean; // New field
+    hasJobDescription?: boolean;
+    provider?: "openai" | "claude"; // New field
   };
   error?: string;
 }
@@ -102,7 +105,7 @@ export interface UseInterviewState {
   error: string | null;
 }
 
-// New interface for cost calculation
+// Cost calculation interface
 export interface CostInfo {
   estimatedTokens: number;
   estimatedCost: number;

@@ -1,23 +1,12 @@
 // services/interviewService.ts
 import { openai } from "@/lib/openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { validateInput, sanitizeForAI } from "@/lib/utils";
-import type {
-  InterviewFormData,
-  InterviewQuestionResponse,
-} from "@/types/interview";
+import type { InterviewFormData, LLMSettings } from "@/types/interview";
 
-// Extended interface to support new features
-interface ExtendedInterviewFormData extends InterviewFormData {
-  jobDescription?: string;
-  openAISettings?: {
-    temperature: number;
-    maxTokens: number;
-    topP: number;
-    frequencyPenalty: number;
-    presencePenalty: number;
-    model: string;
-  };
-}
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
 export class InterviewService {
   private static getDifficultyGuidelines(level: number): string {
@@ -43,7 +32,7 @@ export class InterviewService {
     Always keep questions focused and avoid excessive detail unless it's level 8+.`;
   }
 
-  private static createUserPrompt(formData: ExtendedInterviewFormData): string {
+  private static createUserPrompt(formData: InterviewFormData): string {
     const { jobRole, interviewType, difficulty, jobDescription } = formData;
     const difficultyGuideline = this.getDifficultyGuidelines(difficulty);
 
@@ -110,10 +99,10 @@ export class InterviewService {
     Generate ONLY the question. No additional context or explanations unless difficulty is 7+.`;
   }
 
-  static async generateQuestion(formData: ExtendedInterviewFormData): Promise<{
+  static async generateQuestion(formData: InterviewFormData): Promise<{
     success: boolean;
     question?: string;
-    usage?: any; // OpenAI usage for cost tracking
+    usage?: any;
     error?: string;
   }> {
     try {
@@ -137,8 +126,9 @@ export class InterviewService {
         }
       }
 
-      // Use user settings or defaults
-      const settings = {
+      // Default settings with provider support
+      const defaultSettings: LLMSettings = {
+        provider: "openai",
         temperature: 0.7,
         maxTokens:
           formData.difficulty <= 3 ? 100 : formData.difficulty <= 6 ? 200 : 300,
@@ -146,26 +136,80 @@ export class InterviewService {
         frequencyPenalty: 0.3,
         presencePenalty: 0.0,
         model: "gpt-4o-mini",
-        ...formData.openAISettings, // Override with user settings if provided
       };
 
-      const response = await openai.chat.completions.create({
-        model: settings.model,
-        messages: [
-          { role: "system", content: this.createSystemPrompt() },
-          { role: "user", content: this.createUserPrompt(formData) },
-        ],
-        temperature: settings.temperature,
-        max_tokens: settings.maxTokens,
-        top_p: settings.topP,
-        frequency_penalty: settings.frequencyPenalty,
-        presence_penalty: settings.presencePenalty,
-      });
+      const settings = { ...defaultSettings, ...formData.llmSettings };
+
+      const systemPrompt = this.createSystemPrompt();
+      const userPrompt = this.createUserPrompt(formData);
+
+      let response;
+      let usage;
+
+      if (settings.provider === "claude") {
+        // Use Claude API
+        const claudeResponse = await anthropic.messages.create({
+          model: settings.model,
+          max_tokens: settings.maxTokens,
+          temperature: settings.temperature,
+          top_p: settings.topP,
+          system: systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: userPrompt,
+            },
+          ],
+        });
+
+        // Extract text content from Claude's response
+        const content = claudeResponse.content
+          .filter((block) => block.type === "text")
+          .map((block) => block.text)
+          .join("");
+
+        response = content;
+        usage = {
+          input_tokens: claudeResponse.usage.input_tokens,
+          output_tokens: claudeResponse.usage.output_tokens,
+          total_tokens:
+            claudeResponse.usage.input_tokens +
+            claudeResponse.usage.output_tokens,
+        };
+      } else {
+        // Use OpenAI API
+        const openaiResponse = await openai.chat.completions.create({
+          model: settings.model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: settings.temperature,
+          max_tokens: settings.maxTokens,
+          top_p: settings.topP,
+          frequency_penalty: settings.frequencyPenalty,
+          presence_penalty: settings.presencePenalty,
+        });
+
+        response = openaiResponse.choices[0].message.content;
+        usage = {
+          prompt_tokens: openaiResponse.usage?.prompt_tokens,
+          completion_tokens: openaiResponse.usage?.completion_tokens,
+          total_tokens: openaiResponse.usage?.total_tokens,
+        };
+      }
+
+      if (!response) {
+        return {
+          success: false,
+          error: "No question was generated",
+        };
+      }
 
       return {
         success: true,
-        question: response.choices[0].message.content || undefined,
-        usage: response.usage, // Include usage for cost calculation
+        question: response,
+        usage,
       };
     } catch (error) {
       console.error(
@@ -179,7 +223,7 @@ export class InterviewService {
     }
   }
 
-  // Keep your existing evaluateAnswer method exactly as is
+  // Clean evaluateAnswer method - no duplicates
   static async evaluateAnswer(data: {
     question: string;
     answer: string;

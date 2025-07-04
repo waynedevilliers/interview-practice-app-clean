@@ -2,22 +2,39 @@
 
 import React, { useCallback, useState } from "react";
 import { useInterview } from "@/hooks/useInterview";
-import type { InterviewFormData, CostInfo } from "@/types/interview";
-
-interface OpenAISettings {
-  temperature: number;
-  maxTokens: number;
-  topP: number;
-  frequencyPenalty: number;
-  presencePenalty: number;
-  model: string;
-}
+import type {
+  InterviewFormData,
+  CostInfo,
+  LLMSettings,
+} from "@/types/interview";
 
 const MODEL_COSTS = {
+  // OpenAI Models
   "gpt-4": { input: 0.03, output: 0.06 },
   "gpt-4-turbo": { input: 0.01, output: 0.03 },
   "gpt-4o-mini": { input: 0.00015, output: 0.0006 },
   "gpt-3.5-turbo": { input: 0.0015, output: 0.002 },
+  // Claude Models
+  "claude-3-5-sonnet-20241022": { input: 0.003, output: 0.015 },
+  "claude-3-haiku-20240307": { input: 0.00025, output: 0.00125 },
+  "claude-3-opus-20240229": { input: 0.015, output: 0.075 },
+};
+
+const LLM_MODELS = {
+  openai: [
+    { value: "gpt-4o-mini", label: "GPT-4o Mini (Recommended)" },
+    { value: "gpt-4-turbo", label: "GPT-4 Turbo" },
+    { value: "gpt-4", label: "GPT-4 (Premium)" },
+    { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo (Fast)" },
+  ],
+  claude: [
+    {
+      value: "claude-3-5-sonnet-20241022",
+      label: "Claude 3.5 Sonnet (Recommended)",
+    },
+    { value: "claude-3-haiku-20240307", label: "Claude 3 Haiku (Fast)" },
+    { value: "claude-3-opus-20240229", label: "Claude 3 Opus (Premium)" },
+  ],
 };
 
 export default function QuestionGenerator(): JSX.Element {
@@ -34,14 +51,15 @@ export default function QuestionGenerator(): JSX.Element {
     setUserAnswer,
   } = useInterview();
 
-  // Enhanced form state
+  // Enhanced form state with LLM support
   const [formData, setFormData] = useState<InterviewFormData>({
     jobRole: "",
     interviewType: "technical",
     difficulty: 5,
   });
   const [jobDescription, setJobDescription] = useState<string>("");
-  const [openAISettings, setOpenAISettings] = useState<OpenAISettings>({
+  const [llmSettings, setLlmSettings] = useState<LLMSettings>({
+    provider: "openai",
     temperature: 0.7,
     maxTokens: 1000,
     topP: 0.9,
@@ -54,8 +72,12 @@ export default function QuestionGenerator(): JSX.Element {
 
   // Calculate estimated cost
   const calculateEstimatedCost = useCallback(
-    (settings: OpenAISettings): CostInfo => {
+    (settings: LLMSettings): CostInfo => {
       const modelCost = MODEL_COSTS[settings.model as keyof typeof MODEL_COSTS];
+      if (!modelCost) {
+        return { estimatedTokens: 0, estimatedCost: 0 };
+      }
+
       const estimatedInputTokens = 200;
       const estimatedOutputTokens = Math.min(settings.maxTokens, 800);
 
@@ -70,14 +92,21 @@ export default function QuestionGenerator(): JSX.Element {
     []
   );
 
-  // Update OpenAI setting
+  // Update LLM setting
   const updateSetting = useCallback(
-    (key: keyof OpenAISettings, value: number | string) => {
-      const newSettings = { ...openAISettings, [key]: value };
-      setOpenAISettings(newSettings);
+    (key: keyof LLMSettings, value: number | string) => {
+      const newSettings = { ...llmSettings, [key]: value };
+
+      // Auto-switch model when provider changes
+      if (key === "provider") {
+        const provider = value as "openai" | "claude";
+        newSettings.model = LLM_MODELS[provider][0].value;
+      }
+
+      setLlmSettings(newSettings);
       setCostInfo(calculateEstimatedCost(newSettings));
     },
-    [openAISettings, calculateEstimatedCost]
+    [llmSettings, calculateEstimatedCost]
   );
 
   // Enhanced form submission
@@ -89,39 +118,54 @@ export default function QuestionGenerator(): JSX.Element {
       const enhancedFormData: InterviewFormData = {
         ...formData,
         jobDescription: jobDescription.trim() || undefined,
-        openAISettings,
+        llmSettings, // Changed from openAISettings to llmSettings
       };
 
       handleGenerateQuestion(enhancedFormData);
     },
-    [formData, jobDescription, openAISettings, handleGenerateQuestion]
+    [formData, jobDescription, llmSettings, handleGenerateQuestion]
   );
 
   // Update cost info when question is generated
   React.useEffect(() => {
     if (currentQuestion?.usage) {
       const modelCost =
-        MODEL_COSTS[openAISettings.model as keyof typeof MODEL_COSTS];
-      const actualCost =
-        (currentQuestion.usage.prompt_tokens / 1000) * modelCost.input +
-        (currentQuestion.usage.completion_tokens / 1000) * modelCost.output;
+        MODEL_COSTS[llmSettings.model as keyof typeof MODEL_COSTS];
+      if (modelCost) {
+        // Handle both OpenAI and Claude usage formats
+        const inputTokens =
+          currentQuestion.usage.prompt_tokens ||
+          currentQuestion.usage.input_tokens ||
+          0;
+        const outputTokens =
+          currentQuestion.usage.completion_tokens ||
+          currentQuestion.usage.output_tokens ||
+          0;
 
-      setCostInfo((prev) =>
-        prev
-          ? {
-              ...prev,
-              actualTokens: currentQuestion.usage.total_tokens,
-              actualCost,
-            }
-          : null
-      );
+        const actualCost =
+          (inputTokens / 1000) * modelCost.input +
+          (outputTokens / 1000) * modelCost.output;
+
+        setCostInfo((prev) =>
+          prev
+            ? {
+                ...prev,
+                actualTokens: currentQuestion.usage.total_tokens,
+                actualCost,
+              }
+            : null
+        );
+      }
     }
-  }, [currentQuestion, openAISettings.model]);
+  }, [currentQuestion, llmSettings.model]);
 
   // Initialize cost calculation
   React.useEffect(() => {
-    setCostInfo(calculateEstimatedCost(openAISettings));
-  }, [calculateEstimatedCost, openAISettings]);
+    setCostInfo(calculateEstimatedCost(llmSettings));
+  }, [calculateEstimatedCost, llmSettings]);
+
+  // Get available models for current provider
+  const availableModels = LLM_MODELS[llmSettings.provider];
 
   // Memoized handlers (keeping your existing ones)
   const onSubmitAnswer = useCallback(() => {
@@ -251,7 +295,7 @@ export default function QuestionGenerator(): JSX.Element {
           </form>
         </div>
 
-        {/* Advanced AI Settings Card */}
+        {/* AI Provider & Settings Card */}
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-800">AI Settings</h2>
@@ -264,35 +308,71 @@ export default function QuestionGenerator(): JSX.Element {
           </div>
 
           <div className="space-y-4">
+            {/* LLM Provider Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                AI Provider
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => updateSetting("provider", "openai")}
+                  className={`p-3 border-2 rounded-lg transition-colors ${
+                    llmSettings.provider === "openai"
+                      ? "border-green-500 bg-green-50 text-green-700"
+                      : "border-gray-300 hover:border-gray-400"
+                  }`}
+                  disabled={isLoading}
+                >
+                  <div className="font-medium">OpenAI</div>
+                  <div className="text-xs text-gray-500">GPT Models</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateSetting("provider", "claude")}
+                  className={`p-3 border-2 rounded-lg transition-colors ${
+                    llmSettings.provider === "claude"
+                      ? "border-purple-500 bg-purple-50 text-purple-700"
+                      : "border-gray-300 hover:border-gray-400"
+                  }`}
+                  disabled={isLoading}
+                >
+                  <div className="font-medium">Anthropic</div>
+                  <div className="text-xs text-gray-500">Claude Models</div>
+                </button>
+              </div>
+            </div>
+
             {/* Model Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 AI Model
               </label>
               <select
-                value={openAISettings.model}
+                value={llmSettings.model}
                 onChange={(e) => updateSetting("model", e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={isLoading}
               >
-                <option value="gpt-4o-mini">GPT-4o Mini (Recommended)</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                <option value="gpt-4">GPT-4 (Premium)</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Fast)</option>
+                {availableModels.map((model) => (
+                  <option key={model.value} value={model.value}>
+                    {model.label}
+                  </option>
+                ))}
               </select>
             </div>
 
             {/* Temperature */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Creativity: {openAISettings.temperature}
+                Creativity: {llmSettings.temperature}
               </label>
               <input
                 type="range"
                 min="0"
                 max="2"
                 step="0.1"
-                value={openAISettings.temperature}
+                value={llmSettings.temperature}
                 onChange={(e) =>
                   updateSetting("temperature", parseFloat(e.target.value))
                 }
@@ -311,14 +391,14 @@ export default function QuestionGenerator(): JSX.Element {
                 {/* Max Tokens */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Response Length: {openAISettings.maxTokens} tokens
+                    Response Length: {llmSettings.maxTokens} tokens
                   </label>
                   <input
                     type="range"
                     min="100"
-                    max="2000"
+                    max="4000"
                     step="100"
-                    value={openAISettings.maxTokens}
+                    value={llmSettings.maxTokens}
                     onChange={(e) =>
                       updateSetting("maxTokens", parseInt(e.target.value))
                     }
@@ -330,14 +410,14 @@ export default function QuestionGenerator(): JSX.Element {
                 {/* Top P */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Focus: {openAISettings.topP}
+                    Focus: {llmSettings.topP}
                   </label>
                   <input
                     type="range"
                     min="0.1"
                     max="1"
                     step="0.1"
-                    value={openAISettings.topP}
+                    value={llmSettings.topP}
                     onChange={(e) =>
                       updateSetting("topP", parseFloat(e.target.value))
                     }
@@ -346,27 +426,29 @@ export default function QuestionGenerator(): JSX.Element {
                   />
                 </div>
 
-                {/* Frequency Penalty */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Repetition Control: {openAISettings.frequencyPenalty}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="0.1"
-                    value={openAISettings.frequencyPenalty}
-                    onChange={(e) =>
-                      updateSetting(
-                        "frequencyPenalty",
-                        parseFloat(e.target.value)
-                      )
-                    }
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    disabled={isLoading}
-                  />
-                </div>
+                {/* OpenAI-specific settings */}
+                {llmSettings.provider === "openai" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Repetition Control: {llmSettings.frequencyPenalty}
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.1"
+                      value={llmSettings.frequencyPenalty}
+                      onChange={(e) =>
+                        updateSetting(
+                          "frequencyPenalty",
+                          parseFloat(e.target.value)
+                        )
+                      }
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      disabled={isLoading}
+                    />
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -374,11 +456,30 @@ export default function QuestionGenerator(): JSX.Element {
 
         {/* Cost Information */}
         {costInfo && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-green-800 mb-2">
-              Cost Information
+          <div
+            className={`border-2 rounded-xl p-4 ${
+              llmSettings.provider === "openai"
+                ? "bg-green-50 border-green-200"
+                : "bg-purple-50 border-purple-200"
+            }`}
+          >
+            <h3
+              className={`text-sm font-semibold mb-2 ${
+                llmSettings.provider === "openai"
+                  ? "text-green-800"
+                  : "text-purple-800"
+              }`}
+            >
+              Cost Information (
+              {llmSettings.provider === "openai" ? "OpenAI" : "Claude"})
             </h3>
-            <div className="text-sm text-green-700 space-y-1">
+            <div
+              className={`text-sm space-y-1 ${
+                llmSettings.provider === "openai"
+                  ? "text-green-700"
+                  : "text-purple-700"
+              }`}
+            >
               <div className="flex justify-between">
                 <span>Estimated Cost:</span>
                 <span>${costInfo.estimatedCost.toFixed(4)}</span>
@@ -389,8 +490,14 @@ export default function QuestionGenerator(): JSX.Element {
                   <span>${costInfo.actualCost.toFixed(4)}</span>
                 </div>
               )}
-              <div className="text-xs text-green-600 mt-2">
-                Using {openAISettings.model} model
+              <div
+                className={`text-xs mt-2 ${
+                  llmSettings.provider === "openai"
+                    ? "text-green-600"
+                    : "text-purple-600"
+                }`}
+              >
+                Using {llmSettings.model}
               </div>
             </div>
           </div>
@@ -400,9 +507,17 @@ export default function QuestionGenerator(): JSX.Element {
         <button
           onClick={handleEnhancedSubmit}
           disabled={isLoading || !formData.jobRole.trim()}
-          className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium text-lg"
+          className={`w-full text-white py-3 px-6 rounded-lg hover:opacity-90 disabled:bg-gray-400 transition-colors font-medium text-lg ${
+            llmSettings.provider === "openai"
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-purple-600 hover:bg-purple-700"
+          }`}
         >
-          {isLoading ? "Generating..." : "🚀 Generate Question"}
+          {isLoading
+            ? "Generating..."
+            : `🚀 Generate with ${
+                llmSettings.provider === "openai" ? "OpenAI" : "Claude"
+              }`}
         </button>
       </div>
 
@@ -426,9 +541,24 @@ export default function QuestionGenerator(): JSX.Element {
         {/* Generated Question */}
         {currentQuestion?.question && currentQuestion.metadata && (
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">
-              📝 Your Interview Question
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">
+                📝 Your Interview Question
+              </h3>
+              {currentQuestion.metadata.provider && (
+                <div
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    currentQuestion.metadata.provider === "openai"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-purple-100 text-purple-800"
+                  }`}
+                >
+                  {currentQuestion.metadata.provider === "openai"
+                    ? "OpenAI"
+                    : "Claude"}
+                </div>
+              )}
+            </div>
 
             <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
               <p className="text-gray-700 leading-relaxed">
@@ -600,19 +730,21 @@ export default function QuestionGenerator(): JSX.Element {
               Ready to Practice!
             </h3>
             <p className="text-gray-600 mb-4">
-              Configure your AI settings and generate your first interview
+              Choose your AI provider and generate your first interview
               question.
             </p>
             <div className="text-sm text-gray-500 space-y-1">
               <p>
-                💡 <strong>Step 1:</strong> Set your preferences and generate a
-                question
+                💡 <strong>Step 1:</strong> Choose OpenAI or Claude
               </p>
               <p>
-                ✍️ <strong>Step 2:</strong> Write your answer
+                ⚙️ <strong>Step 2:</strong> Configure your preferences
               </p>
               <p>
-                🎯 <strong>Step 3:</strong> Get AI feedback with cost tracking
+                ✍️ <strong>Step 3:</strong> Generate and answer questions
+              </p>
+              <p>
+                🎯 <strong>Step 4:</strong> Get AI feedback with cost tracking
               </p>
             </div>
           </div>

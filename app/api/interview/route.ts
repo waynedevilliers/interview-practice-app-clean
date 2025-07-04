@@ -36,20 +36,21 @@ export async function POST(request: NextRequest) {
       interviewType,
       difficulty,
       jobDescription,
-      openAISettings,
+      llmSettings,
       adminCritique,
       critiquePrompt,
     } = value;
 
-    // Default OpenAI settings if not provided
+    // Default LLM settings if not provided
     const aiSettings = {
+      provider: "openai" as "openai" | "claude",
       temperature: 0.7,
       maxTokens: 1000,
       topP: 0.9,
       frequencyPenalty: 0.3,
       presencePenalty: 0.0,
       model: "gpt-4o-mini",
-      ...openAISettings, // Override with user settings if provided
+      ...llmSettings, // Override with user settings if provided
     };
 
     // Handle admin critique requests
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
       interviewType,
       difficulty,
       jobDescription,
-      openAISettings: aiSettings,
+      llmSettings: aiSettings,
     });
 
     if (!result.success) {

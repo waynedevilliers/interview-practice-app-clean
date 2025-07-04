@@ -43,14 +43,25 @@ export const interviewRequestSchema = Joi.object({
       "string.pattern.base": "Job description contains invalid characters",
     }),
 
-  openAISettings: Joi.object({
+  llmSettings: Joi.object({
+    provider: Joi.string().valid("openai", "claude").optional(),
     temperature: Joi.number().min(0).max(2).optional(),
     maxTokens: Joi.number().integer().min(50).max(4000).optional(),
     topP: Joi.number().min(0.1).max(1).optional(),
-    frequencyPenalty: Joi.number().min(-2).max(2).optional(),
-    presencePenalty: Joi.number().min(-2).max(2).optional(),
+    frequencyPenalty: Joi.number().min(-2).max(2).optional(), // OpenAI only
+    presencePenalty: Joi.number().min(-2).max(2).optional(), // OpenAI only
     model: Joi.string()
-      .valid("gpt-4", "gpt-4-turbo", "gpt-4o-mini", "gpt-3.5-turbo")
+      .valid(
+        // OpenAI models
+        "gpt-4",
+        "gpt-4-turbo",
+        "gpt-4o-mini",
+        "gpt-3.5-turbo",
+        // Claude models
+        "claude-3-5-sonnet-20241022",
+        "claude-3-haiku-20240307",
+        "claude-3-opus-20240229"
+      )
       .optional(),
   }).optional(),
 
