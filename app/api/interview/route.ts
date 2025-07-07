@@ -3,11 +3,6 @@ import { interviewRequestSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/utils";
 import { ErrorHandler } from "@/lib/errorHandler";
 import { InterviewService } from "@/services/interviewService";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,15 +26,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const {
-      jobRole,
-      interviewType,
-      difficulty,
-      jobDescription,
-      llmSettings,
-      adminCritique,
-      critiquePrompt,
-    } = value;
+    const { jobRole, interviewType, difficulty, jobDescription, llmSettings } =
+      value;
 
     // Default LLM settings if not provided
     const aiSettings = {
@@ -52,41 +40,6 @@ export async function POST(request: NextRequest) {
       model: "gpt-4o-mini",
       ...llmSettings, // Override with user settings if provided
     };
-
-    // Handle admin critique requests
-    if (adminCritique && critiquePrompt) {
-      const response = await openai.chat.completions.create({
-        model: aiSettings.model,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an expert software architect and UX consultant. Provide detailed, actionable critique and recommendations.",
-          },
-          {
-            role: "user",
-            content: critiquePrompt,
-          },
-        ],
-        temperature: aiSettings.temperature,
-        max_tokens: aiSettings.maxTokens,
-        top_p: aiSettings.topP,
-        frequency_penalty: aiSettings.frequencyPenalty,
-        presence_penalty: aiSettings.presencePenalty,
-      });
-
-      return NextResponse.json({
-        success: true,
-        question: response.choices[0].message.content,
-        usage: response.usage, // Include token usage for cost calculation
-        settings: aiSettings, // Echo back settings used
-        metadata: {
-          type: "admin_critique",
-          timestamp: new Date().toISOString(),
-          rateLimitRemaining: rateLimitCheck.remainingRequests,
-        },
-      });
-    }
 
     // Generate interview question using service with enhanced settings
     const result = await InterviewService.generateQuestion({
@@ -132,7 +85,7 @@ export async function GET() {
       "User-configurable OpenAI settings",
       "Cost tracking with token usage",
       "Job description integration",
-      "Multiple AI models support",
+      "Multiple AI models support (OpenAI + Claude)",
     ],
     timestamp: new Date().toISOString(),
   });
