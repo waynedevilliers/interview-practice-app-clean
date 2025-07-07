@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import QuestionGenerator from "@/components/interview/QuestionGenerator";
-import AdminPanel from "@/components/interview/AdminPanel";
+import AdminPanel from "@/components/admin/AdminPanel";
 
 export default function Home(): JSX.Element {
   const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
