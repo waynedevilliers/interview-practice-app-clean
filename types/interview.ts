@@ -1,111 +1,18 @@
-// @/types/interview.ts
-
-export interface InterviewQuestion {
-  id: string;
-  type:
-    | "technical"
-    | "behavioral"
-    | "industry"
-    | "system-design"
-    | "coding"
-    | "leadership"
-    | "cultural-fit";
-  difficulty: number;
-  question: string;
-  followUp?: string;
-  hints?: string[];
-}
-
-export interface InterviewSession {
-  id: string;
+export interface FormData {
   jobRole: string;
-  companyName?: string;
   interviewType: string;
-  questions: InterviewQuestion[];
-  createdAt: Date;
+  difficulty: number;
 }
 
-export interface LLMSettings {
-  provider: "openai" | "claude";
+export interface OpenAISettings {
   temperature: number;
   maxTokens: number;
   topP: number;
-  frequencyPenalty: number; // OpenAI only
-  presencePenalty: number; // OpenAI only
+  frequencyPenalty: number;
+  presencePenalty: number;
   model: string;
 }
 
-// Enhanced form data interface to support multiple LLMs
-export interface InterviewFormData {
-  jobRole: string;
-  interviewType:
-    | "technical"
-    | "behavioral"
-    | "industry"
-    | "system-design"
-    | "coding"
-    | "leadership"
-    | "cultural-fit";
-  difficulty: number;
-  jobDescription?: string;
-  llmSettings?: LLMSettings; // Changed from openAISettings to llmSettings
-}
-
-// API response interfaces
-export interface InterviewQuestionResponse {
-  success: boolean;
-  question?: string;
-  usage?: {
-    prompt_tokens?: number; // OpenAI format
-    completion_tokens?: number; // OpenAI format
-    total_tokens: number;
-    input_tokens?: number; // Claude format
-    output_tokens?: number; // Claude format
-  };
-  settings?: LLMSettings;
-  metadata?: {
-    jobRole: string;
-    interviewType: string;
-    difficulty: number;
-    timestamp: string;
-    rateLimitRemaining?: number;
-    type?: "admin_critique";
-    hasJobDescription?: boolean;
-    provider?: "openai" | "claude"; // New field
-  };
-  error?: string;
-}
-
-export interface AnswerEvaluation {
-  rawFeedback: string;
-  score: number;
-  timestamp: string;
-}
-
-export interface EvaluationResponse {
-  success: boolean;
-  evaluation?: AnswerEvaluation;
-  metadata?: {
-    question: string;
-    answerLength: number;
-    jobRole: string;
-    interviewType: string;
-    difficulty: number;
-  };
-  error?: string;
-}
-
-// Hook return types
-export interface UseInterviewState {
-  currentQuestion: InterviewQuestionResponse | null;
-  userAnswer: string;
-  evaluation: AnswerEvaluation | null;
-  isLoading: boolean;
-  isEvaluating: boolean;
-  error: string | null;
-}
-
-// Cost calculation interface
 export interface CostInfo {
   estimatedTokens: number;
   estimatedCost: number;
@@ -113,10 +20,35 @@ export interface CostInfo {
   actualCost?: number;
 }
 
-// Model pricing information
-export interface ModelCosts {
-  [key: string]: {
-    input: number; // cost per 1K tokens
-    output: number; // cost per 1K tokens
-  };
+export interface InterviewFormProps {
+  onSubmit: (
+    data: FormData & { jobDescription?: string; openAISettings: OpenAISettings }
+  ) => void;
+  isLoading?: boolean;
+  onToggleAdmin: () => void;
 }
+
+// Model cost structure
+export const MODEL_COSTS = {
+  "gpt-4": { input: 0.03, output: 0.06 }, // per 1K tokens
+  "gpt-4-turbo": { input: 0.01, output: 0.03 },
+  "gpt-3.5-turbo": { input: 0.0015, output: 0.002 },
+} as const;
+
+// Interview types for the selector
+export const INTERVIEW_TYPES = [
+  { value: "technical", label: "💻 Technical" },
+  { value: "behavioral", label: "🧠 Behavioral" },
+  { value: "industry", label: "🏢 Industry-Specific" },
+  { value: "system-design", label: "🏗️ System Design" },
+  { value: "coding", label: "⌨️ Coding Challenge" },
+  { value: "leadership", label: "👥 Leadership" },
+  { value: "cultural-fit", label: "🤝 Cultural Fit" },
+] as const;
+
+// Model options for the selector
+export const MODEL_OPTIONS = [
+  { value: "gpt-4-turbo", label: "GPT-4 Turbo (Recommended)" },
+  { value: "gpt-4", label: "GPT-4 (Premium)" },
+  { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo (Fast)" },
+] as const;
