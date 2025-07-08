@@ -8,10 +8,14 @@ interface JobRoleInputProps {
 export function JobRoleInput({ value, onChange, disabled }: JobRoleInputProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label
+        htmlFor="job-role"
+        className="block text-sm font-medium text-gray-700 mb-2"
+      >
         Job Role *
       </label>
       <input
+        id="job-role"
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
