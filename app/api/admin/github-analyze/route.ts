@@ -255,28 +255,28 @@ async function fetchRepositoryFiles(owner: string, repo: string) {
     console.warn("⚠️ No GitHub token found - using unauthenticated requests");
   }
 
-  // Key files to analyze for interview app (based on your actual structure)
+  // Key files to analyze for interview app (updated for chat-based architecture)
   const filesToFetch = [
     "app/page.tsx",
     "app/layout.tsx",
-    "app/api/interview/route.ts",
-    "app/api/interview/evaluate/route.ts",
+    "app/api/chat/route.ts",
     "app/api/admin/github-analyze/route.ts",
-    "components/interview/QuestionGenerator.tsx",
-    "components/interview/InterviewForm.tsx",
-    "components/interview/AdminPanel.tsx",
+    "components/chat/ChatInterface.tsx",
+    "components/chat/ChatMessage.tsx",
+    "components/chat/ChatInput.tsx",
+    "components/chat/TypingIndicator.tsx",
     "components/ui/Button.tsx",
     "components/ui/Input.tsx",
     "lib/openai.ts",
-    "lib/claud.ts", // Note: you have "claud.ts" not "claude.ts"
+    "lib/claud.ts",
     "lib/utils.ts",
     "lib/validation.ts",
     "lib/errorHandler.ts",
     "lib/security.ts",
-    "services/interviewService.ts",
-    "types/interview.ts",
+    "config/prompts.ts",
+    "types/chat.ts",
     "types/admin.ts",
-    "hooks/useInterview.ts",
+    "hooks/useChat.ts",
     "hooks/useAdminPanel.ts",
     "package.json",
     "README.md",

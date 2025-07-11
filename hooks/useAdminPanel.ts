@@ -97,7 +97,7 @@ VERIFICATION CHECKLIST - MUST SEE ACTUAL CODE:
 
 CRITICAL: Do NOT assume features exist based on file names like:
 - "lib/utils.ts" = vector database ❌
-- "services/interviewService.ts" = LangChain ❌  
+- "lib/ai.ts" = LangChain ❌  
 - File existence ≠ feature implementation ❌
 
 ONLY mark ✅ if you see ACTUAL IMPLEMENTATION CODE!

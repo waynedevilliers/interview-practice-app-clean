@@ -1,31 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import QuestionGenerator from "@/components/interview/QuestionGenerator";
-import AdminPanel from "@/components/admin/AdminPanel";
+import ChatInterface from "@/components/chat/ChatInterface";
 
 export default function Home(): JSX.Element {
-  const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">
-            🎯 Interview Practice Assistant
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Technical Interview Practice
           </h1>
-          <p className="text-lg text-gray-600">
-            AI-powered interview questions tailored to your role and experience
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            AI-powered conversational interview practice designed specifically for software engineering roles
           </p>
         </div>
 
-        <QuestionGenerator />
+        <ChatInterface />
       </div>
-
-      <AdminPanel
-        isVisible={showAdminPanel}
-        onToggle={() => setShowAdminPanel(!showAdminPanel)}
-      />
     </div>
   );
 }
